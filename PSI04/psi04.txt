@@ -1,0 +1,55 @@
+#R2 (inside)
+conf
+set interfaces ethernet eth0 address 192.168.123.1/25
+set interfaces ethernet eth0 description inside
+set interfaces ethernet eth1 address 192.168.123.129/30
+set interfaces ethernet eth1 description outside
+commit
+save
+exit
+show interfaces
+conf
+set service dhcp-server disabled false
+set service dhcp-server shared-network-name LAN subnet 192.168.123.0/25 default-router 192.168.123.1
+# LAN is network name (custom)
+set service dhcp-server shared-network-name LAN subnet 192.168.123.0/25 dns-server 192.168.123.1
+set service dhcp-server shared-network-name LAN subnet 192.168.123.0/25 domain-name 'internal-network'
+set service dhcp-server shared-network-name LAN subnet 192.168.123.0/25 lease 86400
+# how long the dhcp request will last
+set service dhcp-server shared-network-name LAN subnet 192.168.123.0/25 start 192.168.123.11 stop 192.168.123.126
+commit
+save
+exit
+conf
+set service dns forwarding name-server 8.8.8.8
+set service dns forwarding listen-on eth0
+set protocols static route 0.0.0.0/0 next-hop 192.168.123.130
+commit
+save
+exit
+
+#R1 (outside)
+conf
+set interfaces ethernet eth0 address 192.168.123.130/30
+set interfaces ethernet eth0 description inside
+set interfaces ethernet eth1 address dhcp
+set interfaces ethernet eth1 description outside
+commit
+save
+exit
+show interfaces
+conf
+set nat source rule 100 outbound-interface eth1
+#set nat source rule 100 source address 192.168.123.130/30
+set nat source rule 100 source address 192.168.123.0/25
+set nat source rule 100 translation address masquerade
+commit
+save
+exit
+conf
+set service dns forwarding dhcp eth1
+set service dns forwarding listen-on eth0
+set protocols static route 192.168.123.0/25 next-hop 192.168.123.129
+commit
+save
+exit
